@@ -1,0 +1,118 @@
+plugins {
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.4'
+    id 'java'
+    id "org.sonarqube" version "3.3"
+    id 'com.google.cloud.tools.jib' version '3.4.0'
+}
+
+java {
+    sourceCompatibility = '17'
+}
+
+group = 'com.tlc.test'
+version = '0.0.1'
+sourceCompatibility = '17'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    finalName = 'post-service-2-pmoeb6ljtf'
+    springProfile = ''
+
+    dockerRegistry = project.hasProperty('dockerRegistry') ? project.getProperty('dockerRegistry') : 'default'
+    dockerUser = project.hasProperty('dockerUser') ? project.getProperty('dockerUser') : 'default'
+    dockerPassword = project.hasProperty('dockerPassword') ? project.getProperty('dockerPassword') : 'default'
+    commitRev = project.hasProperty('commitRev') ? project.getProperty('commitRev') : 'latest'
+    serviceName = project.hasProperty('serviceName') ? project.getProperty('serviceName') : 'default'
+}
+
+configurations {
+    all {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+}
+
+dependencies {
+    implementation 'org.postgresql:postgresql:+'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+    // Spring Boot
+    implementation('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation('org.springframework.boot:spring-boot-starter') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+
+    // Servlet
+    implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'  // 이 줄 추가
+
+    // JWT
+    implementation 'com.nimbusds:nimbus-jose-jwt:8.9'
+
+    // Utility
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation('com.googlecode.log4jdbc:log4jdbc:1.2') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    implementation 'org.json:json:20220320'
+
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Testing
+    implementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
+    implementation 'org.assertj:assertj-core:3.24.2'
+
+    // Other
+    implementation 'com.intellij:annotations:9.0.4'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+bootJar {
+    archiveFileName = 'post-service-2-pmoeb6ljtf.jar'
+    mainClass = 'com.tlc.test.Main'
+}
+
+jib {
+    from {
+        image = "registry.turacocloud.com/turaco-package/openjdk:17-alpine"
+    }
+    to {
+        image = "${dockerRegistry}"
+        if ("${dockerUser}" == ('default')) {
+            credHelper = 'ecr-login'
+        } else {
+            auth {
+                username = "${dockerUser}"
+                password = "${dockerPassword}"
+            }
+        }
+        tags = ["${serviceName}-${commitRev}", "${serviceName}-latest"]
+    }
+    extraDirectories {
+        paths = 'logs'
+    }
+
+    container {
+        volumes = ['/tmp', '/logs']
+    }
+}
